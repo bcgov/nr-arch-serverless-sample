@@ -41,7 +41,7 @@ Resources:
            - AttributeName: PROTECTED_LAND_NAME
              KeyType: HASH
            - AttributeName: ESTABLISHED_DATE
-             KeyType: HASH
+             KeyType: RANGE
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
