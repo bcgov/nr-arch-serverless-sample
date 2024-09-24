@@ -7,7 +7,10 @@ concurrency:
   # Cancel in progress for PR open and close
   group: ${{ github.event.number }}
   cancel-in-progress: true
-
+permissions:
+  id-token: write
+  contents: read
+  
 jobs:
  build_deploy:
     runs-on: ubuntu-latest
