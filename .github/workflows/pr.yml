@@ -1,0 +1,54 @@
+name: PR
+
+on:
+  pull_request:
+
+concurrency:
+  # Cancel in progress for PR open and close
+  group: ${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+ build_deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      ### Assume AWS IAM Role
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_DEPLOY_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: 'ca-central-1'
+
+      ### SAM Build
+      - name: Cache SAM Build
+        id: cache-sam-build
+        uses: actions/cache@v4
+        with:
+          path: |
+            **.aws-sam
+          key: ${{ github.sha }}-sam-cache
+      - name: Run sam build
+        if: steps.cache-sam-build.outputs.cache-hit != 'true'
+        run: |
+          sam build --cached
+
+      ### Prevent prompts and failure when the stack is unchanged
+      - name: SAM deploy
+        env:
+          STACK_NAME: qs-aws-serverless-${{ github.event.number }}
+          TABLE_NAME: par-${{ github.event.number }}
+          TABLE_NAME_AUDIT: par-${{ github.event.number }}-audit
+          STAGE: ${{ github.event.number }}
+        run: |
+          sam deploy --stack-name $STACK_NAME --no-confirm-changeset \
+            --no-fail-on-empty-changeset --capabilities CAPABILITY_NAMED_IAM --parameter-overrides \
+            "TableName=$TABLE_NAME" "TableNameAudit=$TABLE_NAME_AUDIT" "Stage=$STAGE" 
