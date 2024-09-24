@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  qs-aws-serverless, a sample serverless stack for AWS using SAM
+
+Parameters:
+  TableName:
+    Type: String
+    Description: The name of the DynamoDB table
+    Default: qs-aws-serverless
+  TableNameAudit:
+    Type: String
+    Description: The name of the DynamoDB audit table
+    Default: qs-aws-serverless-audit
+Resources:
+  DynamoDBTableApp:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: PROTECTED_LAND_NAME
+          AttributeType: S
+        - AttributeName: ESTABLISHED_DATE
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI-1
+          KeySchema:
+           - AttributeName: PROTECTED_LAND_NAME
+             KeyType: HASH
+           - AttributeName: ESTABLISHED_DATE
+             KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  DynamoDBTableAudit:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      TableName: !Ref TableNameAudit
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+    DependsOn: DynamoDBTableApp
